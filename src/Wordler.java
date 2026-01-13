@@ -13,11 +13,7 @@ public class Wordler {
     }
 }
 
-/**
- * Controls the game flow: shows words and reads user input.
- */
 class WordGame {
-
     private static final int Max_Questions = 10;
 
     private final VocabularyProvider provider;
@@ -47,8 +43,14 @@ class WordGame {
                 if (input.equalsIgnoreCase("Q")) break;
 
                 EvaluationResult result = evaluator.evaluate(input, item);
-                if (result.status() == EvaluationStatus.CORRECT) {
-                    correctCount++;
+
+                switch (result.status()) {
+                    case CORRECT -> {
+                        System.out.println("Korrekt!");
+                        correctCount++;
+                    }
+                    case ALMOST -> System.out.println("Nästan korrekt.. (" + result.details() + ")");
+                    case WRONG -> System.out.println("Fel. Rätt svar: " + item.primaryEnglish());
                 }
 
                 asked++;
@@ -62,74 +64,11 @@ class WordGame {
     }
 }
 
-/**
- * Evaluates a user's answer: correct, almost correct, or wrong.
- */
-class AnswerEvaluator {
-
-    public EvaluationResult evaluate(String userInput, VocabItem item) {
-        String guess = normalize(userInput);
-
-        for (String accepted : item.acceptedEnglish()) {
-            String target = normalize(accepted);
-            if (guess.equals(target)) {
-                return new EvaluationResult(EvaluationStatus.CORRECT, "Exakt match");
-            }
-        }
-
-        return new EvaluationResult(EvaluationStatus.WRONG, "Inte korrekt");
-    }
-
-    private String normalize(String s) {
-        return s.trim().toLowerCase();
-    }
-}
-
-/**
- * Utility for comparing two strings by matching characters at the same positions.
- */
-class Similarity {
-
-    public static int positionMatches(String guess, String target) {
-        int min = Math.min(guess.length(), target.length());
-        int matches = 0;
-        for (int i = 0; i < min; i++) {
-            if(guess.charAt(i) == target.charAt(i)) matches++;
-        }
-        return matches;
-    }
-}
-
-/**
- * Possible outcomes of evaluating an answer.
- */
-enum EvaluationStatus {CORRECT, ALMOST, WRONG}
-
-/**
- * Result from evaluating a user's answer.
- *
- * @param status evaluation status
- * @param details extra info to show to the user
- */
-record EvaluationResult(EvaluationStatus status, String details) {}
-
-/**
- * Abstraction for providing vocabulary items.
- * Makes it easy to replace in-memory words with file-based words later.
- */
 interface VocabularyProvider {
-
-    /**
-     * @return a list of vocabulary items
-     */
     List<VocabItem> getVocabulary();
 }
 
-/**
- * Vocabulary provider that keeps words in memory (hardcoded list).
- */
 class InMemoryVocabulary implements VocabularyProvider {
-
     @Override
     public List<VocabItem> getVocabulary() {
         List<VocabItem> list = new ArrayList<>();
@@ -140,15 +79,55 @@ class InMemoryVocabulary implements VocabularyProvider {
     }
 }
 
-/**
- * Represents one Swedish word and one or more accepted English translations (supports synonyms).
- *
- * @param swedish the Swedish word
- * @param acceptedEnglish accepted English translations
- */
 record VocabItem(String swedish, List<String> acceptedEnglish) {
-
     public String primaryEnglish() {
         return acceptedEnglish.get(0);
     }
 }
+
+class AnswerEvaluator {
+    public EvaluationResult evaluate(String userInput, VocabItem item) {
+        String guess = normalize(userInput);
+
+        for (String accepted : item.acceptedEnglish()) {
+            String target = normalize(accepted);
+            if (guess.equals(target)) {
+                return new EvaluationResult(EvaluationStatus.CORRECT, "Exakt match");
+            }
+        }
+
+        for (String accepted : item.acceptedEnglish()) {
+            String target = normalize(accepted);
+
+            int matches = Similarity.positionMatches(guess, target);
+            int targetLength = target.length();
+            boolean almost = matches > targetLength / 2;
+
+            if (almost) {
+                String details = matches + "/" + targetLength + " bokstäver på rätt plats jämfört med \"" + accepted + "\"";
+                return new EvaluationResult(EvaluationStatus.ALMOST, details);
+            }
+        }
+
+        return new EvaluationResult(EvaluationStatus.WRONG, "Ingen majoritet korrekt");
+    }
+
+    private String normalize(String s) {
+        return s.trim().toLowerCase();
+    }
+}
+
+class Similarity {
+    public static int positionMatches(String guess, String target) {
+        int min = Math.min(guess.length(), target.length());
+        int matches = 0;
+        for (int i = 0; i < min; i++) {
+            if(guess.charAt(i) == target.charAt(i)) matches++;
+        }
+        return matches;
+    }
+}
+
+enum EvaluationStatus {CORRECT, ALMOST, WRONG}
+
+record EvaluationResult(EvaluationStatus status, String details) {}
