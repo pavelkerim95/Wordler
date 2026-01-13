@@ -13,9 +13,11 @@ public class Wordler {
 }
 
 /**
- * Controls the game flow (initial version).
+ * Controls the game flow: shows words and reads user input.
  */
 class WordGame {
+
+    private static final int Max_Questions = 10;
 
     private final VocabularyProvider provider;
 
@@ -24,8 +26,27 @@ class WordGame {
     }
 
     public void run() {
-        System.out.println("Spelet körs...");
-        System.out.println("Antal ord i listan: " + provider.getVocabulary().size());
+        List<VocabItem> items = provider.getVocabulary();
+        Collections.shuffle(items);
+
+        try (Scanner scan = new Scanner(System.in)) {
+            int asked = 0;
+
+            for (VocabItem item : items) {
+                if (asked >= Max_Questions) break;
+
+                System.out.println("------------------------------------------");
+                System.out.println("Svenska ordet: " + item.swedish());
+                System.out.print("Översätt till engelska (Q för att avsluta): ");
+
+                String input = scan.nextLine().trim();
+                if (input.equalsIgnoreCase("Q")) break;
+
+                asked++;
+            }
+
+            System.out.println("Antal frågor: " + asked);
+        }
     }
 }
 
