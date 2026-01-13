@@ -6,8 +6,9 @@ import java.util.*;
 public class Wordler {
     public static void main(String[] arg) {
         VocabularyProvider provider = new InMemoryVocabulary();
+        AnswerEvaluator evaluator = new AnswerEvaluator();
 
-        WordGame game = new WordGame(provider);
+        WordGame game = new WordGame(provider, evaluator);
         game.run();
     }
 }
@@ -20,9 +21,11 @@ class WordGame {
     private static final int Max_Questions = 10;
 
     private final VocabularyProvider provider;
+    private final AnswerEvaluator evaluator;
 
-    public WordGame(VocabularyProvider provider) {
+    public WordGame(VocabularyProvider provider, AnswerEvaluator evaluator) {
         this.provider = provider;
+        this.evaluator = evaluator;
     }
 
     public void run() {
@@ -30,7 +33,7 @@ class WordGame {
         Collections.shuffle(items);
 
         try (Scanner scan = new Scanner(System.in)) {
-            int correctCount = 0; // will be used when evaluator is added
+            int correctCount = 0;
             int asked = 0;
 
             for (VocabItem item : items) {
@@ -43,6 +46,11 @@ class WordGame {
                 String input = scan.nextLine().trim();
                 if (input.equalsIgnoreCase("Q")) break;
 
+                EvaluationResult result = evaluator.evaluate(input, item);
+                if (result.status() == EvaluationStatus.CORRECT) {
+                    correctCount++;
+                }
+
                 asked++;
             }
 
@@ -51,6 +59,44 @@ class WordGame {
             System.out.println("Antal rätt: " + correctCount);
             System.out.println("==============================");
         }
+    }
+}
+
+/**
+ * Evaluates a user's answer: correct, almost correct, or wrong.
+ */
+class AnswerEvaluator {
+
+    public EvaluationResult evaluate(String userInput, VocabItem item) {
+        String guess = normalize(userInput);
+
+        for (String accepted : item.acceptedEnglish()) {
+            String target = normalize(accepted);
+            if (guess.equals(target)) {
+                return new EvaluationResult(EvaluationStatus.CORRECT, "Exakt match");
+            }
+        }
+
+        return new EvaluationResult(EvaluationStatus.WRONG, "Inte korrekt");
+    }
+
+    private String normalize(String s) {
+        return s.trim().toLowerCase();
+    }
+}
+
+/**
+ * Utility for comparing two strings by matching characters at the same positions.
+ */
+class Similarity {
+
+    public static int positionMatches(String guess, String target) {
+        int min = Math.min(guess.length(), target.length());
+        int matches = 0;
+        for (int i = 0; i < min; i++) {
+            if(guess.charAt(i) == target.charAt(i)) matches++;
+        }
+        return matches;
     }
 }
 
@@ -84,9 +130,6 @@ interface VocabularyProvider {
  */
 class InMemoryVocabulary implements VocabularyProvider {
 
-    /**
-     * @return predefined vocabulary list
-     */
     @Override
     public List<VocabItem> getVocabulary() {
         List<VocabItem> list = new ArrayList<>();
@@ -105,9 +148,6 @@ class InMemoryVocabulary implements VocabularyProvider {
  */
 record VocabItem(String swedish, List<String> acceptedEnglish) {
 
-    /**
-     * @return the primary (first) English translation
-     */
     public String primaryEnglish() {
         return acceptedEnglish.get(0);
     }
