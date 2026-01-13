@@ -30,6 +30,7 @@ class WordGame {
         Collections.shuffle(items);
 
         try (Scanner scan = new Scanner(System.in)) {
+            int correctCount = 0; // will be used when evaluator is added
             int asked = 0;
 
             for (VocabItem item : items) {
@@ -45,10 +46,26 @@ class WordGame {
                 asked++;
             }
 
+            System.out.println("========== RESULTAT ==========");
             System.out.println("Antal frågor: " + asked);
+            System.out.println("Antal rätt: " + correctCount);
+            System.out.println("==============================");
         }
     }
 }
+
+/**
+ * Possible outcomes of evaluating an answer.
+ */
+enum EvaluationStatus {CORRECT, ALMOST, WRONG}
+
+/**
+ * Result from evaluating a user's answer.
+ *
+ * @param status evaluation status
+ * @param details extra info to show to the user
+ */
+record EvaluationResult(EvaluationStatus status, String details) {}
 
 /**
  * Abstraction for providing vocabulary items.
