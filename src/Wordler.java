@@ -5,7 +5,27 @@ import java.util.*;
  */
 public class Wordler {
     public static void main(String[] arg) {
-        System.out.println("Wordler startar...");
+        VocabularyProvider provider = new InMemoryVocabulary();
+
+        WordGame game = new WordGame(provider);
+        game.run();
+    }
+}
+
+/**
+ * Controls the game flow (initial version).
+ */
+class WordGame {
+
+    private final VocabularyProvider provider;
+
+    public WordGame(VocabularyProvider provider) {
+        this.provider = provider;
+    }
+
+    public void run() {
+        System.out.println("Spelet körs...");
+        System.out.println("Antal ord i listan: " + provider.getVocabulary().size());
     }
 }
 
